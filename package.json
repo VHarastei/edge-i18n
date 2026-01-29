@@ -1,0 +1,68 @@
+{
+  "name": "edge-i18n",
+  "version": "1.0.0",
+  "description": "Lightning-fast edge-first i18n for React (~2KB)",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./react": {
+      "import": "./dist/react.js",
+      "types": "./dist/react.d.ts"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "dev": "vite",
+    "lint": "biome check .",
+    "format": "biome check --write .",
+    "fetch-translations": "node scripts/fetch-translations.js",
+    "prebuild": "npm run fetch-translations",
+    "build": "vite build",
+    "build:lib": "vite build --config vite.lib.config.ts"
+  },
+  "keywords": [
+    "react",
+    "i18n",
+    "translation",
+    "lightweight",
+    "edge",
+    "tree-shakeable",
+    "offline-first"
+  ],
+  "author": "",
+  "license": "MIT",
+  "packageManager": "pnpm@10.28.1",
+  "peerDependencies": {
+    "react": ">=18.0.0"
+  },
+  "peerDependenciesMeta": {
+    "react": {
+      "optional": true
+    }
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": ["esbuild"]
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.3.12",
+    "@types/react": "^19.2.9",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^5.1.2",
+    "react": "^19.2.3",
+    "react-dom": "^19.2.3",
+    "typescript": "^5.9.3",
+    "vite": "^7.3.1",
+    "vite-plugin-dts": "^4.5.4"
+  }
+}

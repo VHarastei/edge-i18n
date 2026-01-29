@@ -1,0 +1,10 @@
+src/
+example/
+scripts/
+node_modules/
+*.config.ts
+tsconfig.json
+biome.json
+index.html
+pnpm-lock.yaml
+.DS_Store

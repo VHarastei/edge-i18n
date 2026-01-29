@@ -1,0 +1,11 @@
+{
+  "welcome": "Welcome to {{appName}}!",
+  "greeting": "Hello {{name}}",
+  "terms": "I agree to the <link>Terms of Service</link>",
+  "nav": {
+    "home": "Home",
+    "profile": "Profile"
+  },
+  "language": "Language",
+  "switchLang": "Switch to {{lang}}"
+}

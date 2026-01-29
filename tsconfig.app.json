@@ -1,0 +1,18 @@
+{
+  "compilerOptions": {
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "target": "esnext",
+    "strict": true,
+    "jsx": "react-jsx",
+    "isolatedModules": true,
+    "moduleDetection": "force",
+    "skipLibCheck": true,
+    "esModuleInterop": true,
+    "paths": {
+      "edge-i18n": ["./src/index.ts"],
+      "edge-i18n/react": ["./src/react.ts"]
+    }
+  },
+  "include": ["src/example"]
+}

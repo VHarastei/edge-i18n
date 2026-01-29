@@ -1,0 +1,13 @@
+{
+  "title": "Uzivatelsky profil",
+  "name": "Jmeno",
+  "email": "E-mail",
+  "bio": "Bio",
+  "save": "Ulozit zmeny",
+  "saved": "Profil uspesne ulozen!",
+  "settings": {
+    "title": "Nastaveni",
+    "theme": "Motiv",
+    "notifications": "Oznameni"
+  }
+}

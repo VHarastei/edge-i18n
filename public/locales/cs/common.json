@@ -1,0 +1,11 @@
+{
+  "welcome": "Vitejte v {{appName}}!",
+  "greeting": "Ahoj {{name}}",
+  "terms": "Souhlasim s <link>Obchodnimi podminkami</link>",
+  "nav": {
+    "home": "Domu",
+    "profile": "Profil"
+  },
+  "language": "Jazyk",
+  "switchLang": "Prepnout na {{lang}}"
+}
