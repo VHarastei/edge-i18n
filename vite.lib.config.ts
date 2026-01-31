@@ -6,7 +6,6 @@ export default defineConfig({
   plugins: [
     dts({
       include: ["src"],
-      exclude: ["src/example"],
     }),
   ],
   publicDir: false,
@@ -25,6 +24,9 @@ export default defineConfig({
         exports: "named",
         chunkFileNames: "[name].js",
         manualChunks(id) {
+          if (id.includes("src/core/version-checker")) {
+            return "version-checker";
+          }
           if (id.includes("src/core/") || id.includes("src/utils/")) {
             return "core";
           }

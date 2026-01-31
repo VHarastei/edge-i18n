@@ -1,29 +1,43 @@
+import { interpolate } from "../utils/interpolation.js";
+import { getFromStorage, setToStorage } from "../utils/storage.js";
+import {
+  COOKIE_MAX_AGE_DAYS,
+  DEFAULT_CACHE_TTL,
+  DEFAULT_LOCALE_BASE_PATH,
+  DEFAULT_NAMESPACE,
+  DEFAULT_VERSION_CHECK_DELAY,
+  LOCALE_COOKIE_NAME,
+  MS_PER_DAY,
+  STORAGE_PREFIX,
+} from "./constants.js";
+import { createBuiltInDetectors } from "./locale-detectors.js";
 import type {
   I18nConfig,
   Listener,
   Locale,
+  LocaleDetector,
   Namespace,
   Translation,
   Unsubscribe,
+  I18nResolvedConfig,
 } from "./types.js";
-import { startVersionCheck } from "./version-checker.js";
-import { loadFromPublic } from "../utils/dynamic-import.js";
-import { interpolate } from "../utils/interpolation.js";
-import { getFromStorage, setToStorage } from "../utils/storage.js";
 
-declare global {
-  interface Window {
-    __EDGE_I18N__?: {
-      locale: string;
-      namespaces: Record<string, Translation>;
-    };
-  }
+function resolveConfig(config: I18nConfig): I18nResolvedConfig {
+  return {
+    cdnEndpoint: config.cdnEndpoint,
+    defaultLocale: config.defaultLocale,
+    supportedLocales: config.supportedLocales,
+    fallbackLocale: config.fallbackLocale,
+    cacheTTL: config.cacheTTL ?? DEFAULT_CACHE_TTL,
+    versionCheckDelay: config.versionCheckDelay ?? DEFAULT_VERSION_CHECK_DELAY,
+    localeCookieName: config.localeCookieName ?? LOCALE_COOKIE_NAME,
+    cookieMaxAgeDays: config.cookieMaxAgeDays ?? COOKIE_MAX_AGE_DAYS,
+    storagePrefix: config.storagePrefix ?? STORAGE_PREFIX,
+    localeBasePath: config.localeBasePath ?? DEFAULT_LOCALE_BASE_PATH,
+    defaultNamespace: config.defaultNamespace ?? DEFAULT_NAMESPACE,
+    debug: config.debug ?? false,
+  };
 }
-
-const DEFAULT_TTL = 7 * 24 * 60 * 60 * 1000; // 7 days
-const DEFAULT_VERSION = "1.0.0";
-const LOCALE_COOKIE = "locale";
-const COOKIE_EXPIRATION_DAYS = 7;
 
 export class I18nCore {
   private static instance: I18nCore | null = null;
@@ -37,7 +51,7 @@ export class I18nCore {
     return I18nCore.instance;
   }
 
-  private config: I18nConfig;
+  private resolved: I18nResolvedConfig;
   private locale: Locale;
   private memoryCache = new Map<string, Translation>();
   private loadedNamespaces = new Set<string>();
@@ -45,7 +59,8 @@ export class I18nCore {
   private loadingPromises = new Map<string, Promise<void>>();
   private suspensePromises = new Map<string, Promise<void>>();
   private failedNamespaces = new Set<string>();
-  private version = DEFAULT_VERSION;
+
+  private detectors: LocaleDetector[];
 
   constructor(config: I18nConfig) {
     if (I18nCore.instance) {
@@ -54,14 +69,29 @@ export class I18nCore {
       );
     }
     I18nCore.instance = this;
-    this.config = {
-      enableBackgroundUpdates: true,
-      cacheTTL: DEFAULT_TTL,
-      versionCheckDelay: 5000,
-      ...config,
-    };
 
-    // Hydrate from server injection
+    this.resolved = resolveConfig(config);
+
+    this.detectors =
+      config.localeDetectors ??
+      createBuiltInDetectors(
+        this.resolved.localeCookieName,
+        this.resolved.supportedLocales,
+      );
+
+    this.hydrateFromServer();
+    this.locale = this.detectLocale();
+    this.debugLog("initialized", { locale: this.locale });
+    this.initBackgroundUpdates();
+  }
+
+  private debugLog(msg: string, ...args: unknown[]): void {
+    if (this.resolved.debug) {
+      console.debug("[edge-i18n]", msg, ...args);
+    }
+  }
+
+  private hydrateFromServer(): void {
     if (typeof window !== "undefined" && window.__EDGE_I18N__) {
       const injected = window.__EDGE_I18N__;
       for (const [key, data] of Object.entries(injected.namespaces)) {
@@ -70,30 +100,18 @@ export class I18nCore {
         if (parts[1]) this.loadedNamespaces.add(parts[1]);
       }
     }
-
-    this.locale = this.detectLocale();
-    this.initBackgroundUpdates();
   }
 
   private detectLocale(): Locale {
-    if (typeof window !== "undefined" && window.__EDGE_I18N__?.locale) {
-      return window.__EDGE_I18N__.locale;
+    for (const detector of this.detectors) {
+      const result = detector.detect();
+      if (result && this.isSupported(result)) return result;
     }
-
-    const cookieLocale = this.getCookie(LOCALE_COOKIE);
-    if (cookieLocale) return cookieLocale;
-
-    // navigator.language
-    if (typeof navigator !== "undefined") {
-      const lang = navigator.language.split("-")[0];
-      if (lang && this.isSupported(lang)) return lang;
-    }
-
-    return this.config.defaultLocale;
+    return this.resolved.defaultLocale;
   }
 
   private isSupported(locale: string): boolean {
-    return this.config.supportedLocales.includes(locale);
+    return this.resolved.supportedLocales.includes(locale);
   }
 
   private cacheKey(locale: Locale, namespace: Namespace): string {
@@ -106,16 +124,34 @@ export class I18nCore {
     }
   }
 
+  private persistLocaleCookie(locale: Locale): void {
+    if (typeof document === "undefined") return;
+    const expires = new Date(
+      Date.now() + this.resolved.cookieMaxAgeDays * MS_PER_DAY,
+    ).toUTCString();
+    document.cookie = `${this.resolved.localeCookieName}=${locale}; expires=${expires}; path=/; SameSite=Lax`;
+  }
+
   private initBackgroundUpdates(): void {
-    startVersionCheck(
-      this.config,
-      this.locale,
-      this.loadedNamespaces,
-      (_ns, _data) => {
-        // CDN updates are stored in localStorage, available on next session.
-        // We don't re-render current session to avoid unexpected text changes.
-      },
-    );
+    if (!this.resolved.cdnEndpoint) return;
+
+    setTimeout(() => {
+      import("./version-checker.js").then(({ startVersionCheck }) => {
+        startVersionCheck({
+          config: {
+            cdnEndpoint: this.resolved.cdnEndpoint,
+          },
+          locale: this.locale,
+          loadedNamespaces: this.loadedNamespaces,
+          storagePrefix: this.resolved.storagePrefix,
+          localeBasePath: this.resolved.localeBasePath,
+          debug: this.resolved.debug,
+          onUpdate: (_ns, _data) => {
+            this.debugLog("cdn update stored", _ns);
+          },
+        });
+      });
+    }, this.resolved.versionCheckDelay);
   }
 
   subscribe = (listener: Listener): Unsubscribe => {
@@ -132,8 +168,10 @@ export class I18nCore {
   setLocale = (locale: Locale): void => {
     if (!this.isSupported(locale)) return;
     if (locale === this.locale) return;
+    const oldLocale = this.locale;
     this.locale = locale;
-    this.setCookie(LOCALE_COOKIE, locale, COOKIE_EXPIRATION_DAYS);
+    this.debugLog("locale changed", { from: oldLocale, to: locale });
+    this.persistLocaleCookie(locale);
     this.suspensePromises.clear();
     this.failedNamespaces.clear();
 
@@ -163,9 +201,24 @@ export class I18nCore {
     return promise;
   };
 
-  loadNamespaces = (namespaces: Namespace[]): Promise<void[]> => {
+  loadNamespaces = (namespaces: Namespace[]): Promise<Array<void>> => {
     return Promise.all(namespaces.map((ns) => this.loadNamespace(ns)));
   };
+
+  private async fetchNamespace(
+    locale: Locale,
+    namespace: Namespace,
+  ): Promise<Translation | null> {
+    try {
+      const res = await fetch(
+        `${this.resolved.localeBasePath}/${locale}/${namespace}.json`,
+      );
+      if (!res.ok) return null;
+      return (await res.json()) as Translation;
+    } catch {
+      return null;
+    }
+  }
 
   private async resolveNamespace(
     locale: Locale,
@@ -174,34 +227,48 @@ export class I18nCore {
   ): Promise<void> {
     try {
       // Tier 2: localStorage
-      const ttl = this.config.cacheTTL ?? DEFAULT_TTL;
-      const cached = getFromStorage(locale, namespace, ttl);
+      const cached = getFromStorage(
+        this.resolved.storagePrefix,
+        locale,
+        namespace,
+        this.resolved.cacheTTL,
+      );
       if (cached) {
         this.memoryCache.set(key, cached);
         this.loadedNamespaces.add(namespace);
+        this.debugLog("namespace loaded from cache", namespace);
         this.notify();
         return;
       }
 
-      // Tier 3: Dynamic import from /public
-      const bundled = await loadFromPublic(locale, namespace);
+      // Tier 3: fetch from /public
+      const bundled = await this.fetchNamespace(locale, namespace);
       if (bundled) {
         this.memoryCache.set(key, bundled);
         this.loadedNamespaces.add(namespace);
-        setToStorage(locale, namespace, bundled, this.version, "bundled");
+        setToStorage(
+          this.resolved.storagePrefix,
+          locale,
+          namespace,
+          bundled,
+        );
+        this.debugLog("namespace loaded from bundle", namespace);
         this.notify();
         return;
       }
 
       // Tier: Fallback locale
-      if (this.config.fallbackLocale && locale !== this.config.fallbackLocale) {
+      if (
+        this.resolved.fallbackLocale &&
+        locale !== this.resolved.fallbackLocale
+      ) {
         const fallbackKey = this.cacheKey(
-          this.config.fallbackLocale,
+          this.resolved.fallbackLocale,
           namespace,
         );
         if (!this.memoryCache.has(fallbackKey)) {
-          const fallback = await loadFromPublic(
-            this.config.fallbackLocale,
+          const fallback = await this.fetchNamespace(
+            this.resolved.fallbackLocale,
             namespace,
           );
           if (fallback) {
@@ -209,18 +276,21 @@ export class I18nCore {
             // Also set as current locale cache so t() finds it
             this.memoryCache.set(key, fallback);
             this.loadedNamespaces.add(namespace);
+            this.debugLog("namespace loaded from fallback", namespace);
             this.notify();
             return;
           }
         } else {
-          this.memoryCache.set(key, this.memoryCache.get(fallbackKey)!);
+          const fallbackData = this.memoryCache.get(fallbackKey);
+          if (fallbackData) this.memoryCache.set(key, fallbackData);
           this.loadedNamespaces.add(namespace);
+          this.debugLog("namespace loaded from fallback", namespace);
           this.notify();
           return;
         }
       }
-    } catch {
-      // All loading failed, t() will return the key
+    } catch (err) {
+      this.debugLog("namespace load failed", namespace, err);
       this.failedNamespaces.add(key);
     } finally {
       this.loadingPromises.delete(key);
@@ -229,7 +299,7 @@ export class I18nCore {
 
   t = (
     key: string,
-    namespace: Namespace = "common",
+    namespace: Namespace = this.resolved.defaultNamespace,
     params?: Record<string, unknown>,
   ): string => {
     const cacheKey = this.cacheKey(this.locale, namespace);
@@ -247,14 +317,6 @@ export class I18nCore {
 
     if (typeof result !== "string") return key;
     return interpolate(result, params);
-  };
-
-  getTranslation = (namespace: Namespace): Translation | undefined => {
-    return this.memoryCache.get(this.cacheKey(this.locale, namespace));
-  };
-
-  isNamespaceLoaded = (namespace: Namespace): boolean => {
-    return this.memoryCache.has(this.cacheKey(this.locale, namespace));
   };
 
   getSuspensePromise = (namespace: Namespace): Promise<void> | undefined => {
@@ -279,17 +341,4 @@ export class I18nCore {
     this.suspensePromises.set(key, promise);
     return promise;
   };
-
-  private getCookie(name: string): string | null {
-    const value = `; ${document.cookie}`;
-    const parts = value.split(`; ${name}=`);
-    if (parts.length === 2) return parts.pop()!.split(";").shift()!;
-
-    return null;
-  }
-
-  private setCookie(name: string, value: string, days: number) {
-    const expires = new Date(Date.now() + days * 864e5).toUTCString();
-    document.cookie = `${name}=${value}; expires=${expires}; path=/; SameSite=Lax`;
-  }
 }

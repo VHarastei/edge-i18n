@@ -14,5 +14,5 @@
       "edge-i18n/react": ["./src/react.ts"]
     }
   },
-  "include": ["src/example"]
+  "include": ["example"]
 }
