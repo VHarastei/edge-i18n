@@ -1,5 +1,5 @@
-export { I18nCore } from "./core/I18nCore.js";
-export { createBuiltInDetectors } from "./core/locale-detectors.js";
+export { I18nCore } from "./core/I18nCore";
+export { createBuiltInDetectors } from "./core/locale-detectors";
 export type {
   CacheEntry,
   I18nConfig,
@@ -8,4 +8,4 @@ export type {
   Namespace,
   Translation,
   VersionInfo,
-} from "./core/types.js";
+} from "./core/types";

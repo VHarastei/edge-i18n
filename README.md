@@ -161,9 +161,13 @@ Features:
 {
   "version": "1.0.0",
   "timestamp": 1706123456789,
+  "locales": ["en", "cs"],
+  "namespaces": ["common", "profile"],
   "updatedNamespaces": ["common", "profile"]
 }
 ```
+
+The `locales` and `namespaces` arrays are used by the build-time fetch script to discover which files to download from the CDN. `updatedNamespaces` is used at runtime for background update checks.
 
 ## Locale Detection
 
@@ -192,10 +196,15 @@ For zero-latency first render, inject translations into the HTML:
 
 ## Build-Time Translation Fetch
 
-Fetch latest translations from CDN during build:
+Fetch latest translations from CDN during build. The script reads the CDN's `version.json` manifest to discover available locales and namespaces automatically — no hardcoded values needed.
+
+| Env var | Required | Default | Description |
+|---------|----------|---------|-------------|
+| `EDGE_I18N_CDN_ENDPOINT` | Yes | — | Base URL of the translation CDN |
+| `EDGE_I18N_OUTPUT_DIR` | No | `public/locales` | Directory to write fetched files into |
 
 ```bash
-CDN_ENDPOINT=https://cdn.example.com node scripts/fetch-translations.js
+npx edge-i18n-fetch
 ```
 
 Add to your build pipeline:
@@ -203,11 +212,12 @@ Add to your build pipeline:
 ```json
 {
   "scripts": {
-    "prebuild": "npm run fetch-translations",
-    "fetch-translations": "node scripts/fetch-translations.js"
+    "prebuild": "edge-i18n-fetch"
   }
 }
 ```
+
+If `EDGE_I18N_CDN_ENDPOINT` is not set, the script exits silently and bundled translations are used as-is.
 
 ## Preloading
 

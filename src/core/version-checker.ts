@@ -1,6 +1,6 @@
-import { setToStorage } from "../utils/storage.js";
+import { setToStorage } from "../utils/storage";
 const VERSION_FILE_NAME = "version.json";
-import type { Translation, VersionInfo } from "./types.js";
+import type { Translation, VersionInfo } from "./types";
 
 async function loadVersion(basePath: string): Promise<string | null> {
   try {

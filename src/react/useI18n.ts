@@ -4,9 +4,9 @@ import {
   useCallback,
   useSyncExternalStore,
 } from "react";
-import { I18nCore } from "../core/I18nCore.js";
-import type { Namespace } from "../core/types.js";
-import { parseTranslation } from "../utils/parseTranslation.js";
+import { I18nCore } from "../core/I18nCore";
+import type { Namespace } from "../core/types";
+import { parseTranslation } from "../utils/parseTranslation";
 
 interface TFunctionParams extends Record<string, unknown> {
   components?: Record<string, ReactElement>;

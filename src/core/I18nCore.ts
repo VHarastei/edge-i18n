@@ -1,5 +1,5 @@
-import { interpolate } from "../utils/interpolation.js";
-import { getFromStorage, setToStorage } from "../utils/storage.js";
+import { interpolate } from "../utils/interpolation";
+import { getFromStorage, setToStorage } from "../utils/storage";
 import {
   COOKIE_MAX_AGE_DAYS,
   DEFAULT_CACHE_TTL,
@@ -9,8 +9,8 @@ import {
   LOCALE_COOKIE_NAME,
   MS_PER_DAY,
   STORAGE_PREFIX,
-} from "./constants.js";
-import { createBuiltInDetectors } from "./locale-detectors.js";
+} from "./constants";
+import { createBuiltInDetectors } from "./locale-detectors";
 import type {
   I18nConfig,
   Listener,
@@ -20,7 +20,7 @@ import type {
   Translation,
   Unsubscribe,
   I18nResolvedConfig,
-} from "./types.js";
+} from "./types";
 
 function resolveConfig(config: I18nConfig): I18nResolvedConfig {
   return {
@@ -136,7 +136,7 @@ export class I18nCore {
     if (!this.resolved.cdnEndpoint) return;
 
     setTimeout(() => {
-      import("./version-checker.js").then(({ startVersionCheck }) => {
+      import("./version-checker").then(({ startVersionCheck }) => {
         startVersionCheck({
           config: {
             cdnEndpoint: this.resolved.cdnEndpoint,

@@ -1,4 +1,4 @@
-import type { CacheEntry, Translation } from "../core/types.js";
+import type { CacheEntry, Translation } from "../core/types";
 
 function isStorageAvailable(): boolean {
   try {

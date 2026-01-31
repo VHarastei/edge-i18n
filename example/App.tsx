@@ -54,18 +54,8 @@ export function App() {
           {t("nav.profile")}
         </button>
       </nav>
-      {page === "home" && (
-        <Suspense fallback={<div style={{ padding: "2rem" }}>Loading HOME</div>}>
-          <Home />
-        </Suspense>
-      )}
-      {page === "profile" && (
-        <TranslationBoundary
-          fallback={<div style={{ padding: "2rem" }}>Loading PROFILE</div>}
-        >
-          <Profile />
-        </TranslationBoundary>
-      )}
+      {page === "home" && <Home />}
+      {page === "profile" && <Profile />}
     </div>
   );
 }

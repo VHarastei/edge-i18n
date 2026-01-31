@@ -42,6 +42,8 @@ export interface CacheEntry {
 export interface VersionInfo {
   version: string;
   timestamp: number;
+  locales?: string[];
+  namespaces?: string[];
   updatedNamespaces: string[];
 }
 
