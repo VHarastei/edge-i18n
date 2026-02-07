@@ -12,5 +12,5 @@ export default defineConfig({
       "edge-i18n": path.resolve(__dirname, "src/index.ts"),
     },
   },
-  publicDir: path.resolve(__dirname, "public"),
+  publicDir: path.resolve(__dirname, "example/public"),
 });

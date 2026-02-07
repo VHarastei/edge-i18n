@@ -1,7 +1,0 @@
-{
-  "version": "1.0.0",
-  "timestamp": 1706123456789,
-  "locales": ["en", "cs"],
-  "namespaces": ["common", "profile"],
-  "updatedNamespaces": ["common", "profile"]
-}

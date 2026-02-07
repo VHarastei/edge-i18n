@@ -1,11 +1,8 @@
-import { Suspense, useState } from "react";
+import { useState } from "react";
 import { useI18n } from "edge-i18n/react";
-import { TranslationBoundary } from "edge-i18n/react";
-import { I18nCore } from "edge-i18n";
-import { Home } from "./pages/Home.js";
-import { Profile } from "./pages/Profile.js";
-
-import "./i18n.js";
+import { Home } from "./pages/Home";
+import { Profile } from "./pages/Profile";
+import { i18n } from "./i18n";
 
 type Page = "home" | "profile";
 
@@ -41,7 +38,7 @@ export function App() {
         <button
           type="button"
           onClick={() => setPage("profile")}
-          onMouseEnter={() => I18nCore.getInstance().loadNamespace("profile")}
+          onMouseEnter={() => i18n.loadNamespace("profile")}
           style={{
             padding: "0.5rem 1rem",
             cursor: "pointer",

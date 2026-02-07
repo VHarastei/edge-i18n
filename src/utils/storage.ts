@@ -54,3 +54,21 @@ export function setToStorage(
     // Quota exceeded or other error - silently skip
   }
 }
+
+export function getSessionFlag(key: string): boolean {
+  if (typeof window === "undefined") return false;
+  try {
+    return sessionStorage.getItem(key) === "1";
+  } catch {
+    return false;
+  }
+}
+
+export function setSessionFlag(key: string): void {
+  if (typeof window === "undefined") return;
+  try {
+    sessionStorage.setItem(key, "1");
+  } catch {
+    // Quota exceeded or other error - silently skip
+  }
+}

@@ -1,5 +1,6 @@
-import { setToStorage } from "../utils/storage";
+import { setToStorage, getSessionFlag, setSessionFlag } from "../utils/storage";
 const VERSION_FILE_NAME = "version.json";
+const SESSION_KEY = "edge-i18n:version-checked";
 import type { Translation, VersionInfo } from "./types";
 
 async function loadVersion(basePath: string): Promise<string | null> {
@@ -43,7 +44,13 @@ export async function startVersionCheck(deps: VersionCheckDeps): Promise<void> {
   if (!config.cdnEndpoint) return;
   if (typeof window === "undefined") return;
 
+  if (getSessionFlag(SESSION_KEY)) {
+    debugLog(debug, "version check skipped (already checked this session)");
+    return;
+  }
+
   debugLog(debug, "version check started");
+  setSessionFlag(SESSION_KEY);
 
   try {
     const bundledVersion = await loadVersion(localeBasePath);

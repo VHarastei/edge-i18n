@@ -1,6 +1,6 @@
 # edge-i18n
 
-Lightning-fast edge-first i18n for React. ~2KB gzipped.
+Lightning-fast edge-first i18n for React. ~3KB gzipped.
 
 ## Installation
 
@@ -21,7 +21,7 @@ const i18n = new I18nCore({
 });
 
 function App() {
-  const { t, setLocale } = useI18n(i18n);
+  const { t, setLocale } = useI18n();
   return <h1>{t('welcome', { appName: 'My App' })}</h1>;
 }
 ```
@@ -42,11 +42,14 @@ Translations are **never blocking**. The app renders immediately with whatever i
 
 ## Bundle Size
 
-| Library | Size (gzipped) |
-|---------|----------------|
-| **edge-i18n** | **~2KB** |
-| react-i18next | ~26KB |
-| react-intl | ~18KB |
+| Library | Size (minified + gzipped) | Dependencies |
+|---------|---------------------------|--------------|
+| **edge-i18n** | **~3KB** | None |
+| react-i18next | ~40KB | i18next, i18next-http-backend |
+| react-intl | ~18KB | @formatjs/intl |
+| next-intl | ~14KB | use-intl |
+
+edge-i18n has zero dependencies and is designed for edge-first architectures.
 
 ## Tree-Shaking
 
@@ -58,9 +61,6 @@ import { I18nCore } from 'edge-i18n';
 
 // React hook (+~1KB)
 import { useI18n } from 'edge-i18n/react';
-
-// Trans component for JSX in translations
-import { Trans } from 'edge-i18n/react';
 ```
 
 ## API Reference
@@ -93,35 +93,28 @@ const i18n = new I18nCore({
 | `isNamespaceLoaded(ns)` | Check if a namespace is loaded |
 | `subscribe(listener)` | Subscribe to locale changes, returns unsubscribe |
 
-### `useI18n(i18n, namespace?)`
+### `useI18n(namespace?)`
 
 React hook for accessing translations. Uses `useSyncExternalStore` for optimal performance.
 
+The `t()` function supports both value interpolation and component rendering:
+
 ```typescript
 function MyComponent() {
-  const { t, locale, setLocale } = useI18n(i18n, 'common');
+  const { t, locale, setLocale } = useI18n('common');
 
   return (
     <div>
+      {/* Value interpolation: "Hello {{name}}" → "Hello World" */}
       <p>{t('greeting', { name: 'World' })}</p>
+
+      {/* Component rendering: "Read the <link>terms</link>" → ReactNode with <a> */}
+      <p>{t('terms', { components: { link: <a href="/terms" /> } })}</p>
+
       <button onClick={() => setLocale('cs')}>Switch to Czech</button>
     </div>
   );
 }
-```
-
-### `Trans`
-
-Component for translations containing JSX elements.
-
-```typescript
-// Translation: "Read the <link>documentation</link> for more"
-<Trans
-  i18n={i18n}
-  i18nKey="readMore"
-  namespace="common"
-  components={{ link: <a href="/docs" /> }}
-/>
 ```
 
 ### `TranslationBoundary`
@@ -152,7 +145,7 @@ Suspense wrapper that ensures a namespace is loaded before rendering children.
 
 Features:
 - **Interpolation**: `{{variable}}` syntax
-- **JSX markers**: `<tag>content</tag>` for use with `Trans` component
+- **JSX markers**: `<tag>content</tag>` for use with `t(key, { components: {...} })`
 - **Nesting**: Dot notation access (`t('nav.home')`)
 
 ### Version file (`public/locales/version.json`)
@@ -204,7 +197,7 @@ Fetch latest translations from CDN during build. The script reads the CDN's `ver
 | `EDGE_I18N_OUTPUT_DIR` | No | `public/locales` | Directory to write fetched files into |
 
 ```bash
-npx edge-i18n-fetch
+EDGE_I18N_CDN_ENDPOINT=https://cdn.example.com npx edge-i18n-fetch
 ```
 
 Add to your build pipeline:
@@ -212,7 +205,7 @@ Add to your build pipeline:
 ```json
 {
   "scripts": {
-    "prebuild": "edge-i18n-fetch"
+    "prebuild": "EDGE_I18N_CDN_ENDPOINT=https://cdn.example.com edge-i18n-fetch"
   }
 }
 ```
@@ -236,9 +229,9 @@ Preload namespaces on hover for instant page transitions:
 
 | react-i18next | edge-i18n |
 |---------------|-----------|
-| `useTranslation('ns')` | `useI18n(i18n, 'ns')` |
+| `useTranslation('ns')` | `useI18n('ns')` |
 | `t('key', { val })` | `t('key', { val })` |
-| `<Trans i18nKey="k" components={...} />` | `<Trans i18n={i18n} i18nKey="k" components={...} />` |
+| `<Trans i18nKey="k" components={...} />` | `t('k', { components: {...} })` |
 | `i18n.changeLanguage('en')` | `i18n.setLocale('en')` |
 | `i18n.language` | `i18n.getLocale()` |
 | Requires `i18next`, `react-i18next`, backend plugin | Just `edge-i18n` |
