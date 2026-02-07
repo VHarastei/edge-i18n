@@ -1,7 +1,8 @@
-import { setToStorage, getSessionFlag, setSessionFlag } from "../utils/storage";
+import { getSessionFlag, setSessionFlag, setToStorage } from "../utils/storage";
+import type { Translation, VersionInfo } from "./types";
+
 const VERSION_FILE_NAME = "version.json";
 const SESSION_KEY = "edge-i18n:version-checked";
-import type { Translation, VersionInfo } from "./types";
 
 async function loadVersion(basePath: string): Promise<string | null> {
   try {
@@ -28,6 +29,10 @@ export interface VersionCheckDeps {
 
 function debugLog(enabled: boolean, msg: string, ...args: unknown[]): void {
   if (enabled) console.debug("[edge-i18n]", msg, ...args);
+}
+
+function isValidNamespace(ns: unknown): ns is string {
+  return typeof ns === "string" && /^[\w-]+$/.test(ns);
 }
 
 export async function startVersionCheck(deps: VersionCheckDeps): Promise<void> {
@@ -65,7 +70,9 @@ export async function startVersionCheck(deps: VersionCheckDeps): Promise<void> {
         cdn: cdnInfo.version,
       });
 
-      for (const ns of cdnInfo.updatedNamespaces) {
+      const validNamespaces =
+        cdnInfo.updatedNamespaces.filter(isValidNamespace);
+      for (const ns of validNamespaces) {
         if (!loadedNamespaces.has(ns)) continue;
         try {
           const nsRes = await fetch(

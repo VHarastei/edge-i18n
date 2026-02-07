@@ -55,7 +55,6 @@ export interface LocaleDetector {
   detect(): Locale | null;
 }
 
-
 declare global {
   interface Window {
     __EDGE_I18N__?: {

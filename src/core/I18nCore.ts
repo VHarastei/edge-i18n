@@ -13,13 +13,13 @@ import {
 import { createBuiltInDetectors } from "./locale-detectors";
 import type {
   I18nConfig,
+  I18nResolvedConfig,
   Listener,
   Locale,
   LocaleDetector,
   Namespace,
   Translation,
   Unsubscribe,
-  I18nResolvedConfig,
 } from "./types";
 
 function resolveConfig(config: I18nConfig): I18nResolvedConfig {
@@ -51,8 +51,8 @@ export class I18nCore {
     return I18nCore.instance;
   }
 
-  private resolved: I18nResolvedConfig;
-  private locale: Locale;
+  private resolved!: I18nResolvedConfig;
+  private locale!: Locale;
   private memoryCache = new Map<string, Translation>();
   private loadedNamespaces = new Set<string>();
   private listeners = new Set<Listener>();
@@ -60,13 +60,16 @@ export class I18nCore {
   private suspensePromises = new Map<string, Promise<void>>();
   private failedNamespaces = new Set<string>();
 
-  private detectors: LocaleDetector[];
+  private detectors!: LocaleDetector[];
+
+  private isValidNamespace(ns: string): boolean {
+    return /^[\w-]+$/.test(ns);
+  }
 
   constructor(config: I18nConfig) {
     if (I18nCore.instance) {
-      throw new Error(
-        "I18nCore instance already exists. Only one instance is allowed.",
-      );
+      // biome-ignore lint/correctness/noConstructorReturn: Required for HMR singleton pattern
+      return I18nCore.instance;
     }
     I18nCore.instance = this;
 
@@ -129,6 +132,7 @@ export class I18nCore {
     const expires = new Date(
       Date.now() + this.resolved.cookieMaxAgeDays * MS_PER_DAY,
     ).toUTCString();
+    // biome-ignore lint/suspicious/noDocumentCookie: Cookie Store API has limited browser support
     document.cookie = `${this.resolved.localeCookieName}=${locale}; expires=${expires}; path=/; SameSite=Lax`;
   }
 
@@ -184,6 +188,10 @@ export class I18nCore {
   };
 
   loadNamespace = (namespace: Namespace): Promise<void> => {
+    if (!this.isValidNamespace(namespace)) {
+      return Promise.reject(new Error(`Invalid namespace: ${namespace}`));
+    }
+
     const key = this.cacheKey(this.locale, namespace);
 
     // Already in memory
@@ -246,12 +254,7 @@ export class I18nCore {
       if (bundled) {
         this.memoryCache.set(key, bundled);
         this.loadedNamespaces.add(namespace);
-        setToStorage(
-          this.resolved.storagePrefix,
-          locale,
-          namespace,
-          bundled,
-        );
+        setToStorage(this.resolved.storagePrefix, locale, namespace, bundled);
         this.debugLog("namespace loaded from bundle", namespace);
         this.notify();
         return;

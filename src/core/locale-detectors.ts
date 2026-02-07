@@ -31,7 +31,9 @@ export function createCookieDetector(cookieName: string): LocaleDetector {
   };
 }
 
-export function createNavigatorDetector(supportedLocales: Locale[]): LocaleDetector {
+export function createNavigatorDetector(
+  supportedLocales: Locale[],
+): LocaleDetector {
   return {
     name: "navigator",
     detect(): Locale | null {
