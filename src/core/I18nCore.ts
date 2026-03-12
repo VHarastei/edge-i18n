@@ -150,8 +150,11 @@ export class I18nCore {
           storagePrefix: this.resolved.storagePrefix,
           localeBasePath: this.resolved.localeBasePath,
           debug: this.resolved.debug,
-          onUpdate: (_ns, _data) => {
-            this.debugLog("cdn update stored", _ns);
+          onUpdate: (ns, data) => {
+            const key = this.cacheKey(this.locale, ns);
+            this.memoryCache.set(key, data);
+            this.debugLog("cdn update applied", ns);
+            this.notify();
           },
         });
       });
